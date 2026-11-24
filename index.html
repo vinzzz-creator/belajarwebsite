@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Speedtest – Uji Kecepatan Internet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#060914;--line:rgba(255,255,255,.09);--tx:#eaeefb;--mut:#8791b4;--c1:#fbbf24;--c2:#f97316;--dl:#22d3ee;--ul:#e879f9}
+*{box-sizing:border-box;margin:0}
+body{min-height:100vh;font-family:Sora,system-ui,sans-serif;color:var(--tx);display:grid;place-items:center;padding:24px;
+background:radial-gradient(800px 480px at 10% -10%,#16307a66,transparent),radial-gradient(760px 480px at 105% 110%,#6a1a7a55,transparent),var(--bg)}
+.app{width:min(940px,100%)}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:19px}
+.logo i{width:34px;height:34px;border-radius:11px;background:linear-gradient(135deg,var(--dl),var(--ul));display:grid;place-items:center}
+.chip{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mut)}
+.chip b{color:var(--tx);font-weight:600}
+.card{display:grid;grid-template-columns:1fr 1.15fr;gap:28px;padding:28px;border:1px solid var(--line);border-radius:26px;background:linear-gradient(160deg,rgba(255,255,255,.06),rgba(255,255,255,.02));backdrop-filter:blur(14px);box-shadow:0 30px 80px -30px #000}
+.steps{display:flex;gap:8px;justify-content:center;margin-bottom:6px}
+.steps span{font-size:12px;padding:6px 12px;border-radius:99px;border:1px solid var(--line);color:var(--mut);transition:.3s}
+.steps span.on{color:#071018;background:linear-gradient(90deg,var(--c1),var(--c2));border-color:transparent;font-weight:600}
+.steps span.done{color:var(--tx)}
+.steps span.done::before{content:"✓ ";color:var(--dl)}
+.gauge{position:relative;max-width:340px;margin:0 auto}
+.gauge svg{display:block;width:100%}
+.read{position:absolute;left:0;right:0;top:33%;text-align:center}
+#num{display:inline-block;font-size:clamp(46px,9vw,64px);font-weight:700;letter-spacing:-2px;line-height:1;font-variant-numeric:tabular-nums}
+#unit{font-size:15px;color:var(--mut);margin-left:2px}
+#lbl{display:block;margin-top:8px;font-size:13px;color:var(--mut)}
+#arc{filter:drop-shadow(0 0 7px var(--c1));transition:opacity .2s}
+#knob{filter:drop-shadow(0 0 6px var(--c1))}
+button{display:block;margin:6px auto 0;border:0;cursor:pointer;font:600 16px Sora,sans-serif;color:#05101a;padding:15px 44px;border-radius:99px;
+background:linear-gradient(90deg,var(--dl),#818cf8 60%,var(--ul));box-shadow:0 10px 34px -8px var(--dl);transition:transform .15s,opacity .2s}
+button:hover:not(:disabled){transform:translateY(-2px)}
+button:disabled{opacity:.55;cursor:progress;box-shadow:none}
+button:focus-visible{outline:3px solid #fff;outline-offset:3px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tile{padding:14px 16px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+.tile small{font-size:12px;color:var(--mut);display:flex;align-items:center;gap:7px}
+.tile small::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--k,var(--mut))}
+.tile b{display:block;margin-top:6px;font-size:26px;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+.tile b em{font-style:normal;font-size:12px;color:var(--mut);font-weight:400;margin-left:4px}
+.chartbox{margin-top:14px;border:1px solid var(--line);border-radius:16px;padding:10px;background:rgba(0,0,0,.18)}
+canvas{width:100%;height:170px;display:block}
+#verdict{margin-top:12px;font-size:14px;line-height:1.55;color:var(--mut);min-height:44px}
+#verdict.err{color:#fda4af}
+footer{margin-top:14px;text-align:center;font-size:12px;color:var(--mut)}
+@media(max-width:780px){.card{grid-template-columns:1fr;padding:20px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="logo"><i><svg width="18" height="18" viewBox="0 0 24 24" fill="#05101a"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></i>Speedtest</div>
+  <div class="chip"><span>IP <b id="iIp">–</b></span><span>Provider <b id="iIsp">–</b></span><span>Server <b id="iSrv">–</b></span></div>
+</header>
+
+<main class="card">
+  <section>
+    <div class="steps"><span id="s0">Ping</span><span id="s1">Download</span><span id="s2">Upload</span></div>
+    <div class="gauge">
+      <svg viewBox="0 0 300 225" aria-hidden="true">
+        <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="0"><stop offset="0" style="stop-color:var(--c1)"/><stop offset="1" style="stop-color:var(--c2)"/></linearGradient></defs>
+        <path d="M54.74 195 A110 110 0 1 1 245.26 195" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="14" stroke-linecap="round"/>
+        <path id="arc" d="M54.74 195 A110 110 0 1 1 245.26 195" pathLength="100" fill="none" stroke="url(#g)" stroke-width="14" stroke-linecap="round" stroke-dasharray="0 100"/>
+        <circle id="knob" r="8" fill="#fff" cx="54.74" cy="195"/>
+        <g id="ticks" fill="#8791b4" font-size="10" text-anchor="middle"></g>
+      </svg>
+      <div class="read"><span><b id="num">0</b><span id="unit">Mbps</span></span><span id="lbl">Siap mengukur</span></div>
+    </div>
+    <button id="go">Mulai tes</button>
+  </section>
+
+  <section>
+    <div class="tiles">
+      <div class="tile" style="--k:#fbbf24"><small>Ping</small><b id="vPing">–<em>ms</em></b></div>
+      <div class="tile" style="--k:#fb923c"><small>Jitter</small><b id="vJit">–<em>ms</em></b></div>
+      <div class="tile" style="--k:var(--dl)"><small>Download</small><b id="vDl">–<em>Mbps</em></b></div>
+      <div class="tile" style="--k:var(--ul)"><small>Upload</small><b id="vUl">–<em>Mbps</em></b></div>
+    </div>
+    <div class="chartbox"><canvas id="cv"></canvas></div>
+    <p id="verdict">Tekan “Mulai tes” untuk mengukur ping, download, dan upload secara langsung.</p>
+  </section>
+</main>
+<footer>Hasil dipengaruhi perangkat, kualitas WiFi, dan jumlah perangkat lain di jaringan Anda.</footer>
+</div>
+
+<script>
+// Server tes. Ganti jika punya server sendiri (butuh endpoint GET /__down?bytes=N dan POST /__up, dengan CORS aktif).
+const SRV = 'https://speed.cloudflare.com';
+const $ = s => document.querySelector(s);
+const COL = [['#fbbf24','#f97316'],['#22d3ee','#6366f1'],['#e879f9','#8b5cf6']];
+let running = false, fail = null, mode = 'ms', target = 0, shown = 0, ymax = 10;
+const series = { dl: [], ul: [] };
+
+/* ---------- Gauge & grafik ---------- */
+const arc = $('#arc'), knob = $('#knob'), num = $('#num'), cv = $('#cv'), cx = cv.getContext('2d');
+const fpos = v => Math.min(1, Math.log10(1 + v) / 3); // skala logaritmik 0–1000 Mbps
+[0, 5, 10, 50, 100, 500, 1000].forEach(v => {
+  const a = (150 + 240 * fpos(v)) * Math.PI / 180;
+  $('#ticks').insertAdjacentHTML('beforeend', `<text x="${150 + 86 * Math.cos(a)}" y="${143 + 86 * Math.sin(a)}">${v}</text>`);
+});
+const fmt = v => v < 10 ? v.toFixed(2) : v < 100 ? v.toFixed(1) : Math.round(v);
+
+function sizeCanvas() {
+  const r = cv.getBoundingClientRect(), d = devicePixelRatio || 1;
+  cv.width = r.width * d; cv.height = r.height * d; cx.setTransform(d, 0, 0, d, 0, 0);
+}
+addEventListener('resize', sizeCanvas); sizeCanvas();
+
+function line(p, col) {
+  if (p.length < 2) return;
+  const W = cv.clientWidth, H = cv.clientHeight, X = x => 8 + x * (W - 16), Y = y => H - 12 - (y / ymax) * (H - 30);
+  cx.beginPath();
+  p.forEach((q, i) => i ? cx.lineTo(X(q[0]), Y(q[1])) : cx.moveTo(X(q[0]), Y(q[1])));
+  cx.strokeStyle = col; cx.lineWidth = 2.5; cx.lineJoin = 'round'; cx.shadowColor = col; cx.shadowBlur = 10; cx.stroke(); cx.shadowBlur = 0;
+  cx.lineTo(X(p[p.length - 1][0]), H - 12); cx.lineTo(X(p[0][0]), H - 12); cx.closePath();
+  const g = cx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, col + '55'); g.addColorStop(1, col + '00');
+  cx.fillStyle = g; cx.fill();
+}
+function chart() {
+  const W = cv.clientWidth, H = cv.clientHeight;
+  cx.clearRect(0, 0, W, H);
+  const mx = Math.max(10, ...series.dl.map(p => p[1]), ...series.ul.map(p => p[1])) * 1.25;
+  ymax += (mx - ymax) * .1;
+  cx.font = '10px Sora, sans-serif'; cx.fillStyle = '#8791b4'; cx.strokeStyle = 'rgba(255,255,255,.06)'; cx.lineWidth = 1;
+  [.25, .5, .75, 1].forEach(f => {
+    const y = H - 12 - f * (H - 30) * (1 / 1);
+    cx.beginPath(); cx.moveTo(0, y); cx.lineTo(W, y); cx.stroke();
+    cx.fillText(Math.round(ymax * f) + ' Mbps', 8, y - 3);
+  });
+  line(series.dl, '#22d3ee'); line(series.ul, '#e879f9');
+}
+function frame() {
+  shown += (target - shown) * .14;
+  if (Math.abs(target - shown) < .004) shown = target;
+  const f = mode === 'mbps' ? fpos(shown) : 0;
+  arc.style.strokeDasharray = `${f * 100} 100`; arc.style.opacity = f > .003 ? 1 : 0;
+  const a = (150 + 240 * f) * Math.PI / 180;
+  knob.setAttribute('cx', 150 + 110 * Math.cos(a)); knob.setAttribute('cy', 140 + 110 * Math.sin(a));
+  num.textContent = fmt(shown);
+  chart();
+  requestAnimationFrame(frame);
+}
+frame();
+
+/* ---------- UI helper ---------- */
+function setPhase(i, text) {
+  [0, 1, 2].forEach(j => { const s = $('#s' + j); s.className = j === i ? 'on' : j < i ? 'done' : ''; });
+  if (COL[i]) { document.documentElement.style.setProperty('--c1', COL[i][0]); document.documentElement.style.setProperty('--c2', COL[i][1]); }
+  $('#lbl').textContent = text;
+  mode = i === 0 ? 'ms' : 'mbps'; $('#unit').textContent = i === 0 ? ' ms' : ' Mbps';
+}
+const tile = (id, v, u) => $(id).innerHTML = `${v}<em>${u}</em>`;
+
+/* ---------- Pengukur throughput ---------- */
+function measure(getBytes, dur, tick) {
+  return new Promise((res, rej) => {
+    const t0 = performance.now(), S = [[0, 0]];
+    const iv = setInterval(() => {
+      if (fail) { clearInterval(iv); return rej(fail); }
+      const t = performance.now() - t0, b = getBytes(); S.push([t, b]);
+      let k = S.length - 1; while (k > 0 && t - S[k - 1][0] <= 1000) k--; // jendela geser 1 detik
+      const dt = t - S[k][0], v = dt > 60 ? (b - S[k][1]) * 8 / dt / 1000 : 0;
+      tick(Math.min(1, t / dur), v);
+      if (t >= dur) { // hasil akhir: rata-rata setelah fase pemanasan
+        clearInterval(iv);
+        const w = S.find(s => s[0] >= 1500) || S[0];
+        res((b - w[1]) * 8 / (t - w[0]) / 1000);
+      }
+    }, 100);
+  });
+}
+
+async function runPing() {
+  const t = [];
+  for (let i = 0; i < 12; i++) {
+    const s = performance.now();
+    const r = await fetch(`${SRV}/__down?bytes=0&r=${Math.random()}`, { cache: 'no-store' });
+    await r.arrayBuffer();
+    const d = performance.now() - s;
+    if (i) { t.push(d); target = d; tile('#vPing', d.toFixed(0), 'ms'); } // sampel pertama dibuang (handshake)
+  }
+  const sorted = [...t].sort((a, b) => a - b), ping = sorted[sorted.length >> 1];
+  const jit = t.slice(1).reduce((a, v, i) => a + Math.abs(v - t[i]), 0) / (t.length - 1);
+  tile('#vPing', ping.toFixed(0), 'ms'); tile('#vJit', jit.toFixed(1), 'ms');
+}
+
+async function runDown() {
+  let bytes = 0; const ctl = new AbortController();
+  const worker = async () => {
+    while (!ctl.signal.aborted) {
+      try {
+        const r = await fetch(`${SRV}/__down?bytes=25000000&r=${Math.random()}`, { cache: 'no-store', signal: ctl.signal });
+        if (!r.ok) throw Error('HTTP ' + r.status);
+        const rd = r.body.getReader();
+        for (;;) { const { done, value } = await rd.read(); if (done) break; bytes += value.length; }
+      } catch (e) { if (!ctl.signal.aborted) fail = e; return; }
+    }
+  };
+  for (let i = 0; i < 6; i++) worker(); // 6 koneksi paralel
+  try {
+    return await measure(() => bytes, 10000, (p, v) => {
+      series.dl.push([p, v]); target = v; tile('#vDl', fmt(v), 'Mbps');
+    });
+  } finally { ctl.abort(); }
+}
+
+async function runUp() {
+  const chunk = new Uint8Array(65536); crypto.getRandomValues(chunk);
+  const blob = new Blob(Array(64).fill(chunk)); // 4 MB data acak
+  let done = 0, stop = false; const cur = [], xs = [];
+  const run = i => {
+    if (stop) return;
+    const x = new XMLHttpRequest(); xs.push(x); cur[i] = 0;
+    x.open('POST', `${SRV}/__up?r=${Math.random()}`);
+    x.upload.onprogress = e => cur[i] = e.loaded; // progres kirim real time
+    x.onload = () => { done += blob.size; cur[i] = 0; run(i); };
+    x.onerror = () => { if (!stop) fail = Error('Upload gagal'); };
+    x.send(blob);
+  };
+  for (let i = 0; i < 4; i++) run(i); // 4 koneksi paralel
+  try {
+    return await measure(() => done + cur.reduce((a, b) => a + b, 0), 8000, (p, v) => {
+      series.ul.push([p, v]); target = v; tile('#vUl', fmt(v), 'Mbps');
+    });
+  } finally { stop = true; xs.forEach(x => x.abort()); }
+}
+
+/* ---------- Alur utama ---------- */
+async function start() {
+  if (running) return; running = true;
+  const btn = $('#go'), vd = $('#verdict');
+  btn.disabled = true; btn.textContent = 'Sedang mengukur…'; vd.className = ''; vd.textContent = 'Tes berjalan, jangan tutup halaman ini.';
+  series.dl = []; series.ul = []; target = shown = 0; ymax = 10; fail = null;
+  ['#vPing', '#vJit'].forEach(id => tile(id, '–', 'ms')); ['#vDl', '#vUl'].forEach(id => tile(id, '–', 'Mbps'));
+  try {
+    setPhase(0, 'Mengukur latensi'); await runPing();
+    target = shown = 0; fail = null; setPhase(1, 'Download'); const dl = await runDown(); tile('#vDl', fmt(dl), 'Mbps');
+    target = shown = 0; fail = null; setPhase(2, 'Upload'); const ul = await runUp(); tile('#vUl', fmt(ul), 'Mbps');
+    target = ul; setPhase(3, 'Selesai, hasil upload'); mode = 'mbps'; $('#s2').className = 'done';
+    vd.textContent = dl >= 100 ? 'Sangat cepat: aman untuk streaming 4K, gaming online, dan banyak perangkat sekaligus.'
+      : dl >= 25 ? 'Bagus: cukup untuk streaming HD, video call, dan bekerja dari rumah.'
+      : dl >= 5 ? 'Cukup: nyaman untuk browsing dan video standar, tetapi terbatas untuk banyak perangkat.'
+      : 'Lambat: video dan unduhan besar bisa terasa tersendat. Coba dekatkan perangkat ke router.';
+  } catch (e) {
+    setPhase(-1, 'Tes terhenti'); target = 0;
+    vd.className = 'err';
+    vd.textContent = navigator.onLine
+      ? 'Tidak bisa terhubung ke server tes. Periksa VPN, pemblokir iklan, atau firewall, lalu ulangi tes.'
+      : 'Perangkat sedang offline. Sambungkan ke internet, lalu ulangi tes.';
+  } finally { running = false; btn.disabled = false; btn.textContent = 'Ulangi tes'; }
+}
+$('#go').addEventListener('click', start);
+
+/* ---------- Info koneksi ---------- */
+fetch(SRV + '/meta').then(r => r.json()).then(m => {
+  $('#iIp').textContent = m.clientIp || '–'; $('#iIsp').textContent = m.asOrganization || '–';
+  $('#iSrv').textContent = [m.city, m.colo].filter(Boolean).join(' / ') || '–';
+}).catch(() => {});
+</script>
+</body>
+</html>
